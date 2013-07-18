@@ -1,0 +1,31 @@
+#!/usr/bin/ruby
+
+require 'XcodeInstallSort'
+require 'optparse'
+require 'fileutils'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: install-sort-phase.rb [options]"
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options[:verbose] = v
+  end
+  
+  opts.on("-p", "--project-file LOC", "Location of .xcodeproj file") do |p|
+    options[:proj_file_loc] = File.expand_path(p)
+  end
+  
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+end.parse!
+
+project_location = options[:proj_file_loc]
+
+if project_location
+  XcodeSortInstaller::install_sort_on_project(project_location, options[:verbose])
+else
+  puts "No project file specified. Specify the location of a project file with \"-p\""
+end
