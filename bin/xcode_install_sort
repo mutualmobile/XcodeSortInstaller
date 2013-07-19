@@ -2,7 +2,7 @@
 
 require 'xcode_install_sort'
 require 'optparse'
-require 'fileutils'
+require 'colored'
 
 options = {}
 OptionParser.new do |opts|
@@ -12,7 +12,7 @@ OptionParser.new do |opts|
     options[:verbose] = v
   end
   
-  opts.on("-p", "--project-file LOC", "Location of .xcodeproj file") do |p|
+  opts.on("-p", "--project LOC", "Location of .xcodeproj file") do |p|
     options[:proj_file_loc] = File.expand_path(p)
   end
   
@@ -22,7 +22,24 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+def default_project_path
+  directory_files = Dir.entries(Dir.pwd)
+
+  directory_files.reject {|s| s.include?("xcodeproj")}
+  if directory_files.count == 1
+    return directory_files.first
+  elsif directory_files.empty?
+    puts "More than one project file was detected in current directory. Please specify which one using \"-p\".".bold.red
+  end
+end
+
 project_location = options[:proj_file_loc]
+
+if !project_location
+  project_location = default_project_path
+end
+
+abort("No project file was detected in this directory. Specify a project file using \"-p\".".bold.red) unless project_location
 
 if project_location
   installer = XcodeInstallSort::XcodeSortInstaller.new(project_location) do |i|
@@ -30,6 +47,4 @@ if project_location
   end
   
   installer.install!
-else
-  puts "No project file specified. Specify the location of a project file with \"-p\""
 end
