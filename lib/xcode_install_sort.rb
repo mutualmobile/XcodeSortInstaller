@@ -7,7 +7,7 @@ module XcodeInstallSort
   XCODE_SORT_SCRIPT_FILE_NAME = "sort-Xcode-project-file.pl"
   XCODE_SORT_PHASE_SCRIPT_FILE_NAME = "sort-phase.sh"
   XCODE_SORT_TIMESTAMP_FILE_NAME = "project_sort_last_run"
-  XCODE_SORT_PHASE_NAME = "Sort Project File"
+  XCODE_SORT_PHASE_NAME = "XcodeProjectSortPhase"
   XCODE_PROJ_EXTENSION = "xcodeproj"
   
   class XcodeSortInstaller
@@ -30,12 +30,11 @@ module XcodeInstallSort
         #What happens when a project has a sub-project?
         if project.class == Xcodeproj::Project::Object::PBXProject
           if process?(project)
+            append_gitignore
             save_project(project)
           end
         end
       end
-      
-      append_gitignore
     end
     
     private
@@ -83,6 +82,11 @@ module XcodeInstallSort
             puts "\tDependency: #{dependency.target}"
           end 
         end
+        
+        if target_has_sort_script?(potential_target) && @verbose
+          puts "\tTarget #{potential_target.name} has preexisting sort script!"
+        end
+        
       end
 
       return script_targets
@@ -91,30 +95,47 @@ module XcodeInstallSort
     def process?(project)
       script_targets = potential_targets(project)
 
+      installed_targets = []
+
       script_targets.each do |target|
-        add_sort_script_to_target(target)
+        installed_targets << target if add_sort_script_to_target(target)
       end
       
-      puts "Successfully integrated sort phase to #{script_targets.count.to_s} #{"target".pluralize(script_targets.count)}.\n"
+      if installed_targets.empty? && !script_targets.empty?
+        puts "No project targets modified. These targets may have already been setup to use the sort script"
+      elsif script_targets.empty?
+        puts "No project targets modified. It looks like your project has no valid targets for modification"
+      else
+        puts "Successfully integrated sort phase to #{installed_targets.count.to_s} #{"target".pluralize(installed_targets.count)}.\n"
+      end
       
-      return !script_targets.empty?
+      return !installed_targets.empty?
     end
     
     def add_sort_script_to_target(target)
-      puts "Adding sort script to #{target} target" if @verbose
-
       uuid = target.project.generate_uuid
       target_shell_script_text_path = included_file_path(XCODE_SORT_PHASE_SCRIPT_FILE_NAME)
       script_text = File.open(target_shell_script_text_path).read
       
-      if !target_has_sort_script(target)
+      if !target_has_sort_script?(target)
+        puts "Adding sort script to #{target} target" if @verbose
+        
         script = target.new_shell_script_build_phase(XCODE_SORT_PHASE_NAME)
         script.shell_script = script_text
+        
+        return true
       end
+      
+      return false
     end
     
-    def target_has_sort_script(target)
-      # TODO: Implement sort script detection
+    def target_has_sort_script?(target)
+      target.build_phases.each do |phase|
+        if phase.display_name.include?(XCODE_SORT_PHASE_NAME)
+          return true
+        end
+      end
+      
       return false
     end
     
