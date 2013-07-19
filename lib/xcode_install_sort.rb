@@ -4,12 +4,19 @@ require 'colored'
 
 module XcodeInstallSort
   
-  INSTALL_SUCCESS_MSG = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n"
+  MSG_INSTALL_SUCCESS = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n"
+  MSG_NO_VALID_TARGETS = "\nNo project targets modified. It looks like your project has no valid targets for modification."
+  MSG_TARGETS_ALREADY_SETUP = "\nNo project targets modified. These targets may have already been setup to use the sort script."
+  MSG_ERROR_SAVING_TO_DISK = "Error saving project file to disk."
+  MSG_ADDING_GITIGNORE_ENTRY = "Adding project sort timestamp file to gitignore\n"
+  MSG_GITIGNORE_EXISTS = "Gitignore already contains project sort timestamp file exclusion\n"
+  MSG_NOT_XCODEPROJ = "File path not an xcodeproj!"
   XCODE_SORT_SCRIPT_FILE_NAME = "sort-Xcode-project-file.pl"
   XCODE_SORT_PHASE_SCRIPT_FILE_NAME = "sort-phase.sh"
   XCODE_SORT_TIMESTAMP_FILE_NAME = "project_sort_last_run"
   XCODE_SORT_PHASE_NAME = "XcodeProjectSortPhase"
   XCODE_PROJ_EXTENSION = "xcodeproj"
+  GITIGNORE_ENTRY = "#{XCODE_SORT_TIMESTAMP_FILE_NAME}\n"
   
   class XcodeSortInstaller
     attr_accessor :verbose
@@ -22,7 +29,7 @@ module XcodeInstallSort
     end
     
     def install!
-      raise "File path not an xcodeproj! #{@project_file_location}".bold.red unless File.basename(@project_file_location).include?(XCODE_PROJ_EXTENSION)
+      raise "#{MSG_NOT_XCODEPROJ} #{@project_file_location}".bold.red unless File.basename(@project_file_location).include?(XCODE_PROJ_EXTENSION)
       
       puts "Analyzing targets in #{@project_file_location}...\n".bold.green if @verbose
 
@@ -53,13 +60,13 @@ module XcodeInstallSort
     
     def add_gitignore_maybe(gitignore_path)
       if needs_gitignore_entry?(gitignore_path)
-        puts "Adding project sort timestamp file to gitignore\n".bold.green
+        puts MSG_ADDING_GITIGNORE_ENTRY.bold.green
         
         File.open(gitignore_path, 'a') do |f|
-          f << "#{XCODE_SORT_TIMESTAMP_FILE_NAME}\n"
+          f << GITIGNORE_ENTRY
         end
       else
-        puts "Gitignore already contains project sort timestamp file exclusion\n".yellow if @verbose
+        puts MSG_GITIGNORE_EXISTS.yellow if @verbose
       end
     end
     
@@ -97,17 +104,21 @@ module XcodeInstallSort
       script_targets = potential_targets(project)
 
       installed_targets = []
+      
+      if !script_targets.empty? && @verbose
+        puts "\nFound #{script_targets.count} potential #{"target".pluralize(script_targets.count)}".bold.green
+      end
 
       script_targets.each do |target|
         installed_targets << target if add_sort_script_to_target(target)
       end
       
       if installed_targets.empty? && !script_targets.empty?
-        puts "\nNo project targets modified. These targets may have already been setup to use the sort script.".yellow
+        puts MSG_TARGETS_ALREADY_SETUP.yellow
       elsif script_targets.empty?
-        puts "\nNo project targets modified. It looks like your project has no valid targets for modification.".yellow
+        puts MSG_NO_VALID_TARGETS.yellow
       else
-        puts "Successfully integrated sort phase to #{installed_targets.count.to_s} #{"target".pluralize(installed_targets.count)}.\n".green
+        puts "Successfully integrated sort phase to #{installed_targets.count.to_s} #{"target".pluralize(installed_targets.count)}.\n".bold.green
       end
       
       return !installed_targets.empty?
@@ -119,7 +130,7 @@ module XcodeInstallSort
       script_text = File.open(target_shell_script_text_path).read
       
       if !target_has_sort_script?(target)
-        puts "Adding sort script to #{target.display_name.bold.green} target" if @verbose
+        puts "Adding sort script to target #{target.display_name.bold.green}".green if @verbose
         
         script = target.new_shell_script_build_phase(XCODE_SORT_PHASE_NAME)
         script.shell_script = script_text
@@ -153,7 +164,7 @@ module XcodeInstallSort
       puts "Saving project file modifications...".green if @verbose
       
       base_folder = File.dirname(@project_file_location)
-      puts "Copying sort script to project location: #{base_folder}".green
+      puts "Copying sort script to project location: #{base_folder}"
       FileUtils.cp included_file_path(XCODE_SORT_SCRIPT_FILE_NAME),
        "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}",
        :verbose => @verbose
@@ -161,9 +172,9 @@ module XcodeInstallSort
       success = project.project.save_as(@project_file_location)
       
       if success
-        puts INSTALL_SUCCESS_MSG.bold.green
+        puts MSG_INSTALL_SUCCESS.bold.green
       else
-        puts "Error saving project file to disk.".bold.red end
+        puts MSG_ERROR_SAVING_TO_DISK.bold.red end
       
       return success
     end
