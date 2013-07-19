@@ -1,4 +1,4 @@
-Copyright (c) 2013 Lars Anderson
+Copyright (c) 2013 Mutual Mobile
 
 MIT License
 
