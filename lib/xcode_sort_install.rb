@@ -4,7 +4,7 @@ require 'colored'
 
 module XcodeSortInstall
   
-  MSG_INSTALL_SUCCESS = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* initially result in massive project-file changes. This is not the case on subsequent builds. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n\nFrom now on when building your project, your project file will sort itself automagically.\n"
+  MSG_INSTALL_SUCCESS = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* initially result in massive project-file changes. This is not the case on subsequent builds. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n\nFrom now on when building your project, your project file will sort itself automagically, hopefully making project file merges a little less painful.\n"
   MSG_NO_VALID_TARGETS = "\nNo project targets modified. It looks like your project has no valid targets for modification."
   MSG_TARGETS_ALREADY_SETUP = "\nNo project targets modified. These targets may have already been setup to use the sort script."
   MSG_ERROR_SAVING_TO_DISK = "Error saving project file to disk."
