@@ -25,7 +25,11 @@ end.parse!
 project_location = options[:proj_file_loc]
 
 if project_location
-  XcodeInstallSort::XcodeSortInstaller.new.install_sort_on_project(project_location, options[:verbose])
+  installer = XcodeInstallSort::XcodeSortInstaller.new(project_location) do |i|
+    i.verbose = options[:verbose]
+  end
+  
+  installer.install_sort_on_project
 else
   puts "No project file specified. Specify the location of a project file with \"-p\""
 end

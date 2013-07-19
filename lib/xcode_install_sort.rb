@@ -1,70 +1,98 @@
 require "xcode_install_sort/version"
 require 'Xcodeproj'
-require 'fileutils'
 
 module XcodeInstallSort
+  
+  INSTALL_SUCCESS_MSG = "The next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes."
+  XCODE_SORT_SCRIPT_FILE_NAME = "sort-Xcode-project-file.pl"
+  XCODE_SORT_PHASE_SCRIPT_FILE_NAME = "sort-phase.sh"
+  XCODE_SORT_TIMESTAMP_FILE_NAME = "project_sort_last_run"
+  XCODE_SORT_PHASE_NAME = "Sort Project File"
+  
   class XcodeSortInstaller
-    def install_sort_on_project(project_file_location, verbose)
+    attr_accessor :verbose
+    attr_reader :project_file_location
+    
+    public
+    def initialize(project_path)
+      @project_file_location = project_path
+      yield self if block_given?
+    end
+    
+    def install_sort_on_project
+      raise "File path not an xcodeproj!" unless File.basename(@project_file_location).include?("xcodeproj")
       
-      raise "File path not an xcodeproj!" unless File.basename(project_file_location).include?("xcodeproj")
-      
-      puts "Integrating sort script into targets in #{project_file_location}"
+      puts "Integrating sort script into targets in #{@project_file_location}" if @verbose
 
-      proj = Xcodeproj::Project.new(project_file_location)
-
-      proj.objects.each do |object|
+      proj = Xcodeproj::Project.new(@project_file_location)
+      proj.objects.each do |project|
         #What happens when a project has a sub-project?
-        if object.class == Xcodeproj::Project::Object::PBXProject
-          if process_project_object?(object, verbose)
-            save_project(object, project_file_location, verbose)
+        if project.class == Xcodeproj::Project::Object::PBXProject
+          if process_project?(project)
+            save_project(project)
           end
         end
       end
       
-      append_gitignore(project_file_location)
+      append_gitignore
     end
     
-    def append_gitignore(project_file_path)
-      directory = File.dirname(project_file_path)
+    private
+    def install_sort_on_project_at_location(project_file_location)
+      @project_file_location = project_file_location
+      install_sort_on_project
+    end
+    
+    def append_gitignore
+      directory = File.dirname(@project_file_location)
       gitignore_path = "#{directory}/.gitignore"
       
-      if File.readlines(gitignore_path).grep(/project_sort_last_run/).size == 0
-        puts "Adding project sore timestamp file to gitignore"
+      add_gitignore_maybe(gitignore_path)
+    end
+    
+    def add_gitignore_maybe(gitignore_path)
+      if needs_gitignore_entry?(gitignore_path)
+        puts "Adding project sort timestamp file to gitignore"
         
         File.open(gitignore_path, 'a') do |f|
-          f << "project_sort_last_run\n"
+          f << "#{XCODE_SORT_TIMESTAMP_FILE_NAME}\n"
         end
       else
-        puts "Gitignore already contains project sort timestamp file"
+        puts "Gitignore already contains project sort timestamp file exclusion" if @verbose
       end
     end
     
-    def install_targets_from_project(project_object, verbose)
+    def needs_gitignore_entry?(gitignore_path)
+      gitignore_timestamp_matches = File.readlines(gitignore_path).grep(/project_sort_last_run/).size
+      return (gitignore_timestamp_matches == 0)
+    end
+    
+    def potential_targets_from_project(project_object)
 
       script_targets = []
 
       project_object.targets.each do |potential_target|
-        if potential_target.dependencies.count == 0
-          puts "Target without dependencies: #{potential_target.name}" if verbose
+        dependency_count = potential_target.dependencies.count
+        if dependency_count == 0
+          puts "Target without dependencies: #{potential_target.name}" if @verbose
           script_targets << potential_target unless script_targets.include?(potential_target)
-        else
-          puts "Target #{potential_target.name} has #{potential_target.dependencies.count} #{"dependency".pluralize(potential_target.dependencies.count)}" if verbose
+        elsif @verbose
+          puts "Target #{potential_target.name} has #{dependency_count} #{"dependency".pluralize(dependency_count)}"
           potential_target.dependencies.each do |dependency|
-            puts "\tDependency: #{dependency.target}" if verbose
-          end
+            puts "\tDependency: #{dependency.target}"
+          end 
         end
       end
 
       return script_targets
     end
     
-    def process_project_object?(project, verbose)
+    def process_project?(project)
       first_target = project.targets[0]
-
-      script_targets = install_targets_from_project(project, verbose)
+      script_targets = potential_targets_from_project(project)
 
       script_targets.each do |target|
-        add_sort_script_to_target(target, verbose)
+        add_sort_script_to_target(target)
       end
       
       puts "Successfully integrated sort phase to #{script_targets.count.to_s} #{"target".pluralize(script_targets.count)}.\n"
@@ -72,39 +100,46 @@ module XcodeInstallSort
       return (script_targets.count > 0)
     end
     
-    def add_sort_script_to_target(target, verbose)
-      puts "Adding sort script to #{target} target" if verbose
+    def add_sort_script_to_target(target)
+      puts "Adding sort script to #{target} target" if @verbose
 
       uuid = target.project.generate_uuid
-
-      target_shell_script_text_path = included_file_path("sort-phase.sh")
+      target_shell_script_text_path = included_file_path(XCODE_SORT_PHASE_SCRIPT_FILE_NAME)
       script_text = File.open(target_shell_script_text_path).read
       
-      script = target.new_shell_script_build_phase("Sort Project File")
-      script.shell_script = script_text
+      if !target_has_sort_script(target)
+        script = target.new_shell_script_build_phase(XCODE_SORT_PHASE_NAME)
+        script.shell_script = script_text
+      end
+    end
+    
+    def target_has_sort_script(target)
+      # TODO: Implement sort script detection
+      return false
     end
     
     def included_file_path(file_name)
-      t = ["#{File.dirname(File.expand_path($0))}/../lib/xcode_install_sort/#{file_name}",
-        "#{Gem.dir}/gems/xcode_install_sort-#{XcodeInstallSort::VERSION}/lib/xcode_install_sort/#{file_name}"]
+      t = ["#{File.dirname(File.expand_path($0))}/../lib/#{XcodeInstallSort::NAME}/#{file_name}",
+        "#{Gem.dir}/gems/#{XcodeInstallSort::NAME}-#{XcodeInstallSort::VERSION}/lib/#{XcodeInstallSort::NAME}/#{file_name}"]
         t.each {|i| return i if File.readable?(i) }
-      raise "both paths are invalid: #{t}"
+      raise "Both sort script paths are invalid: #{t}\nYou may have to reinstall this gem or check your load paths."
     end
     
-    def save_project(project, project_file_location, verbose)
-      puts "Saving project file modifications..." if verbose
+    def save_project(project)
+      puts "Saving project file modifications..." if @verbose
       
-      base_folder = File.dirname(project_file_location)
+      base_folder = File.dirname(@project_file_location)
       puts "Copying sort script to project location: #{base_folder}"
-      FileUtils.cp included_file_path("sort-Xcode-project-file.pl"), "#{base_folder}/sort-Xcode-project-file.pl", :verbose => verbose
+      FileUtils.cp included_file_path(XCODE_SORT_SCRIPT_FILE_NAME), "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}", :verbose => @verbose
 
-      if project.project.save_as(project_file_location)
-        puts "The next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes."
-        return true
+      success = project.project.save_as(@project_file_location)
+      
+      if success
+        puts INSTALL_SUCCESS_MSG
       else
-        puts "Error saving project file."
-        return false
-      end
+        puts "Error saving project file." end
+      
+      return success
     end
   end
 end
