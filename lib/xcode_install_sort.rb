@@ -8,6 +8,7 @@ module XcodeInstallSort
   XCODE_SORT_PHASE_SCRIPT_FILE_NAME = "sort-phase.sh"
   XCODE_SORT_TIMESTAMP_FILE_NAME = "project_sort_last_run"
   XCODE_SORT_PHASE_NAME = "Sort Project File"
+  XCODE_PROJ_EXTENSION = "xcodeproj"
   
   class XcodeSortInstaller
     attr_accessor :verbose
@@ -20,7 +21,7 @@ module XcodeInstallSort
     end
     
     def install_sort_on_project
-      raise "File path not an xcodeproj!" unless File.basename(@project_file_location).include?("xcodeproj")
+      raise "File path not an xcodeproj!" unless File.basename(@project_file_location).include?(XCODE_PROJ_EXTENSION)
       
       puts "Integrating sort script into targets in #{@project_file_location}" if @verbose
 
@@ -72,11 +73,11 @@ module XcodeInstallSort
       script_targets = []
 
       project_object.targets.each do |potential_target|
-        dependency_count = potential_target.dependencies.count
-        if dependency_count == 0
+        if potential_target.dependencies.empty?
           puts "Target without dependencies: #{potential_target.name}" if @verbose
           script_targets << potential_target unless script_targets.include?(potential_target)
         elsif @verbose
+          dependency_count = potential_target.dependencies.count
           puts "Target #{potential_target.name} has #{dependency_count} #{"dependency".pluralize(dependency_count)}"
           potential_target.dependencies.each do |dependency|
             puts "\tDependency: #{dependency.target}"
@@ -88,7 +89,6 @@ module XcodeInstallSort
     end
     
     def process_project?(project)
-      first_target = project.targets[0]
       script_targets = potential_targets_from_project(project)
 
       script_targets.each do |target|
@@ -97,7 +97,7 @@ module XcodeInstallSort
       
       puts "Successfully integrated sort phase to #{script_targets.count.to_s} #{"target".pluralize(script_targets.count)}.\n"
       
-      return (script_targets.count > 0)
+      return !script_targets.empty?
     end
     
     def add_sort_script_to_target(target)
@@ -122,7 +122,7 @@ module XcodeInstallSort
       t = ["#{File.dirname(File.expand_path($0))}/../lib/#{XcodeInstallSort::NAME}/#{file_name}",
         "#{Gem.dir}/gems/#{XcodeInstallSort::NAME}-#{XcodeInstallSort::VERSION}/lib/#{XcodeInstallSort::NAME}/#{file_name}"]
         t.each {|i| return i if File.readable?(i) }
-      raise "Both sort script paths are invalid: #{t}\nYou may have to reinstall this gem or check your load paths."
+      raise "Both sort script paths are invalid: #{t}\nYou may have to reinstall this gem or check your load path."
     end
     
     def save_project(project)
@@ -130,7 +130,9 @@ module XcodeInstallSort
       
       base_folder = File.dirname(@project_file_location)
       puts "Copying sort script to project location: #{base_folder}"
-      FileUtils.cp included_file_path(XCODE_SORT_SCRIPT_FILE_NAME), "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}", :verbose => @verbose
+      FileUtils.cp included_file_path(XCODE_SORT_SCRIPT_FILE_NAME),
+       "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}",
+       :verbose => @verbose
 
       success = project.project.save_as(@project_file_location)
       
