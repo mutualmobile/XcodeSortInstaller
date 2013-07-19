@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'xcode_install_sort/version'
+require 'xcode_sort_install/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "xcode_install_sort"
-  spec.version       = XcodeInstallSort::VERSION
+  spec.name          = "xcode_sort_install"
+  spec.version       = XcodeSortInstall::VERSION
   spec.authors       = ["Lars Anderson"]
   spec.email         = ["lars.anderson@mutualmobile.com"]
   spec.description   = "Sort-script installer for Xcode project targets"

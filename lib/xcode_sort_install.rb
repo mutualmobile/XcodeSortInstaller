@@ -1,8 +1,8 @@
-require "xcode_install_sort/version"
+require "xcode_sort_install/version"
 require 'Xcodeproj'
 require 'colored'
 
-module XcodeInstallSort
+module XcodeSortInstall
   
   MSG_INSTALL_SUCCESS = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n"
   MSG_NO_VALID_TARGETS = "\nNo project targets modified. It looks like your project has no valid targets for modification."

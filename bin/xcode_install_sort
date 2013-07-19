@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 
-require 'xcode_install_sort'
+require 'xcode_sort_install'
 require 'optparse'
 require 'colored'
 
@@ -42,7 +42,7 @@ end
 abort("No project file was detected in this directory. Specify a project file using \"-p\".".bold.red) unless project_location
 
 if project_location
-  installer = XcodeInstallSort::XcodeSortInstaller.new(project_location) do |i|
+  installer = XcodeSortInstall::XcodeSortInstaller.new(project_location) do |i|
     i.verbose = options[:verbose]
   end
   
