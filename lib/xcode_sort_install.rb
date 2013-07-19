@@ -21,6 +21,7 @@ module XcodeSortInstall
   class XcodeSortInstaller
     attr_accessor :verbose
     attr_reader :project_file_location
+    attr_accessor :root_dir
     
     public
     def initialize(project_path)
@@ -38,7 +39,7 @@ module XcodeSortInstall
         #What happens when a project has a sub-project?
         if project.class == Xcodeproj::Project::Object::PBXProject
           if process?(project)
-            append_gitignore
+            append_gitignore #TODO: What about .svnignore?
             save_project(project)
           end
         end
@@ -52,27 +53,35 @@ module XcodeSortInstall
     end
     
     def append_gitignore
-      directory = File.dirname(@project_file_location)
-      gitignore_path = "#{directory}/.gitignore"
-      
-      add_gitignore_maybe(gitignore_path)
+      if @root_dir
+        puts "Using root directory: #{@root_dir}"
+        add_gitignore_maybe("#{@root_dir}/.gitignore")
+      else
+        puts "Using project directory: #{@project_file_location}"
+        directory = File.dirname(@project_file_location)
+        add_gitignore_maybe("#{directory}/.gitignore")
+      end
     end
     
     def add_gitignore_maybe(gitignore_path)
       if needs_gitignore_entry?(gitignore_path)
         puts MSG_ADDING_GITIGNORE_ENTRY.bold.green
-        
+
         File.open(gitignore_path, 'a') do |f|
           f << GITIGNORE_ENTRY
         end
+      elsif !File.exists?(gitignore_path)
+        puts "Automatic detection of .gitignore file failed. Please manually add the file \"#{XCODE_SORT_TIMESTAMP_FILE_NAME}\" to your gitignore.".red
       else
         puts MSG_GITIGNORE_EXISTS.yellow if @verbose
       end
     end
     
     def needs_gitignore_entry?(gitignore_path)
-      gitignore_timestamp_matches = File.readlines(gitignore_path).grep(/project_sort_last_run/).size
-      return (gitignore_timestamp_matches == 0)
+      if File.exists?(gitignore_path)
+        gitignore_timestamp_matches = File.readlines(gitignore_path).grep(/project_sort_last_run/).size
+        return (gitignore_timestamp_matches == 0)
+      end
     end
     
     def potential_targets(project)
@@ -151,8 +160,8 @@ module XcodeSortInstall
     
     def included_file_path(file_name)
       t = [
-        "#{File.dirname(File.expand_path($0))}/../lib/#{XcodeInstallSort::NAME}/#{file_name}",
-        "#{Gem.dir}/gems/#{XcodeInstallSort::NAME}-#{XcodeInstallSort::VERSION}/lib/#{XcodeInstallSort::NAME}/#{file_name}"
+        "#{File.dirname(File.expand_path($0))}/../lib/#{XcodeSortInstall::NAME}/#{file_name}",
+        "#{Gem.dir}/gems/#{XcodeSortInstall::NAME}-#{XcodeSortInstall::VERSION}/lib/#{XcodeSortInstall::NAME}/#{file_name}"
         ]
         t.each { |i|
           return i if File.readable?(i)
@@ -165,9 +174,16 @@ module XcodeSortInstall
       
       base_folder = File.dirname(@project_file_location)
       puts "Copying sort script to project location: #{base_folder}"
-      FileUtils.cp included_file_path(XCODE_SORT_SCRIPT_FILE_NAME),
-       "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}",
-       :verbose => @verbose
+      script_file_path = "#{base_folder}/#{XCODE_SORT_SCRIPT_FILE_NAME}"
+      puts "Script file path: #{script_file_path}"
+      puts "Destination path: #{included_file_path(XCODE_SORT_SCRIPT_FILE_NAME)}"
+      FileUtils.copy(included_file_path(XCODE_SORT_SCRIPT_FILE_NAME), script_file_path, :verbose => @verbose)
+       
+      if !File.executable?(script_file_path)
+        
+        # sort_script = File.open(script_file_path,"w")
+        File.chmod(0777, script_file_path)
+      end
 
       success = project.project.save_as(@project_file_location)
       

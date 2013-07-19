@@ -16,6 +16,10 @@ OptionParser.new do |opts|
     options[:proj_file_loc] = File.expand_path(p)
   end
   
+  opts.on("-r", "--root-dir DIR", "Root directory of project (Where .git or .svn folder lives).") do |r|
+    options[:root_dir] = File.expand_path(r)
+  end
+  
   opts.on_tail("-h", "--help", "Show this message") do
     puts opts
     exit
@@ -25,11 +29,14 @@ end.parse!
 def default_project_path
   directory_files = Dir.entries(Dir.pwd)
 
-  directory_files.reject {|s| s.include?("xcodeproj")}
+  directory_files.reject!{|s| !s.include?("xcodeproj")}
+  puts directory_files
   if directory_files.count == 1
     return directory_files.first
   elsif directory_files.empty?
-    puts "More than one project file was detected in current directory. Please specify which one using \"-p\".".bold.red
+    puts "No \".xcodeproj\" files were found in this directory.".bold.red
+  else
+    puts "More than one project file was detected in current directory.".bold.red
   end
 end
 
@@ -39,11 +46,12 @@ if !project_location
   project_location = default_project_path
 end
 
-abort("No project file was detected in this directory. Specify a project file using \"-p\".".bold.red) unless project_location
+abort("Please specify a project file using \"-p\".".bold.red) unless project_location
 
 if project_location
   installer = XcodeSortInstall::XcodeSortInstaller.new(project_location) do |i|
     i.verbose = options[:verbose]
+    i.root_dir = options[:root_dir]
   end
   
   installer.install!
