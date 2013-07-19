@@ -20,7 +20,7 @@ module XcodeInstallSort
       yield self if block_given?
     end
     
-    def install_sort_on_project
+    def install!
       raise "File path not an xcodeproj!" unless File.basename(@project_file_location).include?(XCODE_PROJ_EXTENSION)
       
       puts "Integrating sort script into targets in #{@project_file_location}" if @verbose
@@ -29,7 +29,7 @@ module XcodeInstallSort
       proj.objects.each do |project|
         #What happens when a project has a sub-project?
         if project.class == Xcodeproj::Project::Object::PBXProject
-          if process_project?(project)
+          if process?(project)
             save_project(project)
           end
         end
@@ -39,9 +39,9 @@ module XcodeInstallSort
     end
     
     private
-    def install_sort_on_project_at_location(project_file_location)
+    def install_at_location!(project_file_location)
       @project_file_location = project_file_location
-      install_sort_on_project
+      install!
     end
     
     def append_gitignore
@@ -68,11 +68,11 @@ module XcodeInstallSort
       return (gitignore_timestamp_matches == 0)
     end
     
-    def potential_targets_from_project(project_object)
+    def potential_targets(project)
 
       script_targets = []
 
-      project_object.targets.each do |potential_target|
+      project.targets.each do |potential_target|
         if potential_target.dependencies.empty?
           puts "Target without dependencies: #{potential_target.name}" if @verbose
           script_targets << potential_target unless script_targets.include?(potential_target)
@@ -88,8 +88,8 @@ module XcodeInstallSort
       return script_targets
     end
     
-    def process_project?(project)
-      script_targets = potential_targets_from_project(project)
+    def process?(project)
+      script_targets = potential_targets(project)
 
       script_targets.each do |target|
         add_sort_script_to_target(target)

@@ -29,7 +29,7 @@ if project_location
     i.verbose = options[:verbose]
   end
   
-  installer.install_sort_on_project
+  installer.install!
 else
   puts "No project file specified. Specify the location of a project file with \"-p\""
 end
