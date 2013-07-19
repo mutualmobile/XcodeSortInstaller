@@ -12,11 +12,11 @@ OptionParser.new do |opts|
     options[:verbose] = v
   end
   
-  opts.on("-p", "--project LOC", "Location of .xcodeproj file") do |p|
+  opts.on("-p", "--project PROJ", "Location of .xcodeproj file") do |p|
     options[:proj_file_loc] = File.expand_path(p)
   end
   
-  opts.on("-r", "--root-dir DIR", "Root directory of project (Where .git or .svn folder lives).") do |r|
+  opts.on("-r", "--root-dir DIR", "Root directory of project (Where .git or .svn folder lives)") do |r|
     options[:root_dir] = File.expand_path(r)
   end
   
@@ -30,7 +30,7 @@ def default_project_path
   directory_files = Dir.entries(Dir.pwd)
 
   directory_files.reject!{|s| !s.include?("xcodeproj")}
-  puts directory_files
+  
   if directory_files.count == 1
     return directory_files.first
   elsif directory_files.empty?
