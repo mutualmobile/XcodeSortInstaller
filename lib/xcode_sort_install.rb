@@ -20,8 +20,9 @@ module XcodeSortInstall
   
   class XcodeSortInstaller
     attr_accessor :verbose
-    attr_reader :project_file_location
     attr_accessor :root_dir
+    
+    attr_reader :project_file_location
     
     public
     def initialize(project_path)
@@ -180,8 +181,6 @@ module XcodeSortInstall
       FileUtils.copy(included_file_path(XCODE_SORT_SCRIPT_FILE_NAME), script_file_path, :verbose => @verbose)
        
       if !File.executable?(script_file_path)
-        
-        # sort_script = File.open(script_file_path,"w")
         File.chmod(0777, script_file_path)
       end
 
