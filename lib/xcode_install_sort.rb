@@ -4,6 +4,14 @@ require 'fileutils'
 
 module XcodeInstallSort
   class XcodeSortInstaller
+    def sort_script_file_path
+      file_name = "sort-Xcode-project-file.pl"
+          t = ["#{File.dirname(File.expand_path($0))}/../lib/xcode_install_sort/#{file_name}",
+               "#{Gem.dir}/gems/xcode_install_sort-#{XcodeInstallSort::VERSION}/lib/xcode_install_sort/#{file_name}"]
+          t.each {|i| return i if File.readable?(i) }
+          raise "both paths are invalid: #{t}"
+        end
+    
     def install_targets_from_project(project_object, verbose)
 
       script_targets = []
@@ -35,14 +43,14 @@ module XcodeInstallSort
           first_target = object.targets[0]
 
           script_targets = install_targets_from_project(object, verbose)
+          
+          puts "Current directory: #{Dir.pwd}"
 
           if (script_targets.count > 0)
             base_folder = File.dirname(project_file_location)
             puts "Copying sort script to project location: #{base_folder}"
-            FileUtils.cp "sort-Xcode-project-file.pl", "#{base_folder}/sort-Xcode-project-file.pl", :verbose => verbose
+            FileUtils.cp sort_script_file_path, "#{base_folder}/sort-Xcode-project-file.pl", :verbose => verbose
           end
-
-          puts "Current directory: #{Dir.pwd}"
 
           script_text = File.open("#{Dir.pwd}/sort-phase.sh").read
 
