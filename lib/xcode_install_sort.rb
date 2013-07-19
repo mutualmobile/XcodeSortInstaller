@@ -5,6 +5,9 @@ require 'fileutils'
 module XcodeInstallSort
   class XcodeSortInstaller
     def install_sort_on_project(project_file_location, verbose)
+      
+      raise "File path not an xcodeproj!" unless File.basename(project_file_location).include?("xcodeproj")
+      
       puts "Integrating sort script into targets in #{project_file_location}"
 
       proj = Xcodeproj::Project.new(project_file_location)
@@ -14,10 +17,25 @@ module XcodeInstallSort
         if object.class == Xcodeproj::Project::Object::PBXProject
           if process_project_object?(object, verbose)
             save_project(object, project_file_location, verbose)
-            #check for .gitignore file
-            #append sort file timestamp file to .gitignore
           end
         end
+      end
+      
+      append_gitignore(project_file_location)
+    end
+    
+    def append_gitignore(project_file_path)
+      directory = File.dirname(project_file_path)
+      gitignore_path = "#{directory}/.gitignore"
+      
+      if File.readlines(gitignore_path).grep(/project_sort_last_run/).size == 0
+        puts "Adding project sore timestamp file to gitignore"
+        
+        File.open(gitignore_path, 'a') do |f|
+          f << "project_sort_last_run\n"
+        end
+      else
+        puts "Gitignore already contains project sort timestamp file"
       end
     end
     
@@ -82,8 +100,10 @@ module XcodeInstallSort
 
       if project.project.save_as(project_file_location)
         puts "The next time you build your project, your project file will sort itself. This *will* result in massive project-file changes. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes."
+        return true
       else
         puts "Error saving project file."
+        return false
       end
     end
   end
