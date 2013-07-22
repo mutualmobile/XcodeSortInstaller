@@ -96,9 +96,11 @@ module XcodeSortInstall
         elsif @verbose
           dependency_count = potential_target.dependencies.count
           puts "Target #{potential_target.name} has #{dependency_count} #{"dependency".pluralize(dependency_count)}".bold.yellow
-          potential_target.dependencies.each do |dependency|
-            puts "\tDependency: #{dependency.target}".yellow
-          end 
+          
+          if !has_valid_dependency?(potential_target)
+            puts "Target has a dependency with an unknown target. Assuming third-party dependency..."
+            script_targets << potential_target unless script_targets.include?(potential_target)
+          end
         end
         
         if target_has_sort_script?(potential_target) && @verbose
@@ -108,6 +110,20 @@ module XcodeSortInstall
       end
 
       return script_targets
+    end
+    
+    def has_valid_dependency?(target)
+      has_valid_dependency = false
+      target.dependencies.each do |dependency|
+        if dependency.target
+          puts "\tDependency: #{dependency.target}".yellow
+          has_valid_dependency = true
+        else
+          puts "\tInvalid dependency #{dependency}".yellow
+        end
+      end
+      
+      return has_valid_dependency
     end
     
     def process?(project)
@@ -128,7 +144,7 @@ module XcodeSortInstall
       elsif script_targets.empty?
         puts MSG_NO_VALID_TARGETS.yellow
       else
-        puts "Successfully integrated sort phase to #{installed_targets.count.to_s} #{"target".pluralize(installed_targets.count)}.\n".bold.green
+        puts "Successfully integrated sort phase into #{installed_targets.count.to_s} #{"target".pluralize(installed_targets.count)}.\n".bold.green
       end
       
       return !installed_targets.empty?
