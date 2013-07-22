@@ -20,11 +20,11 @@ Or install it yourself as:
 
 ## Usage
 
-If your .xcodeproj file is located in the root directory of your folder structure:
+If your `.xcodeproj` file is located in the root directory of your folder structure:
 
     $ xcode_sort_installer
 
-If your .xcodeproj file is in another directory other than the source root:
+If your `.xcodeproj` file is in another directory other than the source root:
 
 Run in your subdirectory `SubFolder/ $ xcode_sort_installer -r ..` indicating that your source root is one directory below the current directory. If your project is not under version control or you don't care about adding our timestamp file to your .*ignore file, then you don't need to specify a root directory.
 
@@ -41,6 +41,11 @@ Some other options:
 -h, --help                       Show this message
 ```
 
+## What is Added?
+- A new "run script" phase on each of your build dependency-less build targets
+- A new [perl script](https://github.com/adobe/webkit/blob/master/Tools/Scripts/sort-Xcode-project-file) that sorts your project file on each build if it has been modified
+- A `.gitignore` entry to ignore the timestamp file that is used by the sort script phase to determine when the last sort was performed.
+
 ## Contributing
 
 1. Fork it
@@ -52,3 +57,7 @@ Some other options:
 ##License
 
 Standard MIT License
+
+##Known Issues
+- Will only add ignore entry to .gitignore and not any other SCM ignore file
+- Have had a couple requests to install this using a git pre-commit hook
