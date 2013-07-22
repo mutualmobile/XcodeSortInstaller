@@ -4,6 +4,7 @@ require 'colored'
 
 module XcodeSortInstall
   
+  MSG_MANUAL_MODIFY = "NOTE: You *MUST* modify the project file manually first to kick off the sort script. The sort script does not like the file format version that the xcodeproj gem produces and must be manually rebuilt. This is actively being researched to automate or mitigate.\n"
   MSG_INSTALL_SUCCESS = "\nSuccess!\nThe next time you build your project, your project file will sort itself. This *will* initially result in massive project-file changes. This is not the case on subsequent builds. Coordinate with others on your team to ensure their versions of the project file are also sorted. It is advisable you commit these project file changes and new scripts into source control before making further changes.\n\nFrom now on when building your project, your project file will sort itself automagically, hopefully making project file merges a little less painful.\n"
   MSG_NO_VALID_TARGETS = "\nNo project targets modified. It looks like your project has no valid targets for modification."
   MSG_TARGETS_ALREADY_SETUP = "\nNo project targets modified. These targets may have already been setup to use the sort script."
@@ -204,8 +205,10 @@ module XcodeSortInstall
       
       if success
         puts MSG_INSTALL_SUCCESS.bold.green
+        puts MSG_MANUAL_MODIFY.bold.red
       else
-        puts MSG_ERROR_SAVING_TO_DISK.bold.red end
+        puts MSG_ERROR_SAVING_TO_DISK.bold.red
+      end
       
       return success
     end
