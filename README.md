@@ -9,7 +9,7 @@ Keeps your `.xcodeproj` file sorted every time your target is built by using App
 ###Private (Current Method)
 Download `.gem` file from releases section. Install using:
 
-    $ gem install `xcode_sort_installer-0.0.1.gem`
+    $ gem install `xcode_sort_install-0.0.1.gem`
 
 ###Public (Not Yet Available)
 Add this line to your application's Gemfile:
