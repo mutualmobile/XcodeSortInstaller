@@ -11,7 +11,7 @@ Download `.gem` file from releases section. Install using:
 
     $ gem install `xcode_sort_install-0.0.1.gem`
 
-###Public (Not Yet Available)
+<!--- ###Public (Not Yet Available)
 Add this line to your application's Gemfile:
 
     gem 'xcode_sort_install'
@@ -23,7 +23,7 @@ And then execute:
 Or install it yourself as:
 
     $ gem install xcode_sort_install
-
+--->
 ## Usage
 
 If your `.xcodeproj` file is located in the root directory of your folder structure:
