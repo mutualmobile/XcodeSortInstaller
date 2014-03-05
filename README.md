@@ -65,5 +65,6 @@ Some other options:
 Standard MIT License
 
 ##Known Issues
+- This build phase will cancel your build as a result of modifiying the project file. This has proved very annoying for some.
 - Will only add ignore entry to .gitignore and not any other SCM ignore file
 - Have had a couple requests to install this using a git pre-commit hook
